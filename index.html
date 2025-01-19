@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Target Clicker Game</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+        
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            font-family: 'Orbitron', sans-serif;
+            color: #fff;
+        }
+
+        #game-container {
+            width: 800px;
+            height: 600px;
+            position: relative;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid #4ecca3;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-top: 20px;
+            box-shadow: 0 0 20px rgba(78, 204, 163, 0.3);
+            backdrop-filter: blur(5px);
+        }
+
+        .target {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, #4ecca3 0%, #2c9c7c 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            user-select: none;
+            box-shadow: 0 0 15px rgba(78, 204, 163, 0.5);
+            transition: transform 0.1s ease;
+            animation: targetPulse 2s infinite;
+        }
+
+        .target:hover {
+            transform: scale(1.1);
+        }
+
+        @keyframes targetPulse {
+            0% { box-shadow: 0 0 15px rgba(78, 204, 163, 0.5); }
+            50% { box-shadow: 0 0 25px rgba(78, 204, 163, 0.8); }
+            100% { box-shadow: 0 0 15px rgba(78, 204, 163, 0.5); }
+        }
+
+        #stats-container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px;
+            display: flex;
+            gap: 30px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(78, 204, 163, 0.3);
+        }
+
+        #score-container, #timer {
+            font-size: 24px;
+            color: #4ecca3;
+            text-shadow: 0 0 10px rgba(78, 204, 163, 0.5);
+        }
+
+        #start-button {
+            font-size: 20px;
+            padding: 15px 30px;
+            margin: 20px;
+            cursor: pointer;
+            background: #4ecca3;
+            color: #1a1a2e;
+            border: none;
+            border-radius: 25px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 0 15px rgba(78, 204, 163, 0.3);
+        }
+
+        #start-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(78, 204, 163, 0.5);
+        }
+
+        #start-button:active {
+            transform: translateY(1px);
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: #4ecca3;
+            text-align: center;
+            display: none;
+            text-shadow: 0 0 20px rgba(78, 204, 163, 0.8);
+            animation: gameOverPulse 2s infinite;
+        }
+
+        @keyframes gameOverPulse {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.1); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .target-pop {
+            animation: popEffect 0.3s ease-out;
+        }
+
+        @keyframes popEffect {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(0); }
+        }
+
+        #combo-indicator {
+            position: absolute;
+            font-size: 24px;
+            color: #4ecca3;
+            pointer-events: none;
+            animation: floatUp 1s ease-out forwards;
+            text-shadow: 0 0 10px rgba(78, 204, 163, 0.8);
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-50px); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div id="stats-container">
+        <div id="score-container">SCORE: <span id="score">0</span></div>
+        <div id="timer">TIME: 60s</div>
+    </div>
+    <button id="start-button">Start Game</button>
+    <div id="game-container">
+        <div id="game-over" class="game-over">GAME OVER!</div>
+    </div>
+
+    <script>
+        let score = 0;
+        let timeLeft = 60;
+        let gameInterval;
+        let targetInterval;
+        let isGameRunning = false;
+        let combo = 0;
+        let lastClickTime = 0;
+
+        const gameContainer = document.getElementById('game-container');
+        const scoreDisplay = document.getElementById('score');
+        const timerDisplay = document.getElementById('timer');
+        const startButton = document.getElementById('start-button');
+        const gameOverDisplay = document.getElementById('game-over');
+
+        function showComboIndicator(x, y, points) {
+            const indicator = document.createElement('div');
+            indicator.id = 'combo-indicator';
+            indicator.style.left = x + 'px';
+            indicator.style.top = y + 'px';
+            
+            const comboBonus = Math.min(combo, 5);
+            const totalPoints = points * (1 + comboBonus * 0.1);
+            indicator.textContent = `+${totalPoints.toFixed(1)}`;
+            
+            gameContainer.appendChild(indicator);
+            setTimeout(() => gameContainer.removeChild(indicator), 1000);
+        }
+
+        function createTarget() {
+            const target = document.createElement('div');
+            target.className = 'target';
+            
+            const maxX = gameContainer.clientWidth - 50;
+            const maxY = gameContainer.clientHeight - 50;
+            target.style.left = Math.random() * maxX + 'px';
+            target.style.top = Math.random() * maxY + 'px';
+            
+            const points = Math.floor(Math.random() * 10) + 1;
+            target.textContent = points;
+            
+            target.addEventListener('click', (e) => {
+                if (isGameRunning) {
+                    const currentTime = Date.now();
+                    if (currentTime - lastClickTime < 500) {
+                        combo++;
+                    } else {
+                        combo = 0;
+                    }
+                    lastClickTime = currentTime;
+
+                    const comboBonus = Math.min(combo, 5);
+                    const totalPoints = points * (1 + comboBonus * 0.1);
+                    score += totalPoints;
+                    scoreDisplay.textContent = Math.floor(score);
+
+                    target.classList.add('target-pop');
+                    showComboIndicator(e.clientX - gameContainer.offsetLeft, e.clientY - gameContainer.offsetTop, points);
+                    
+                    setTimeout(() => {
+                        if (target.parentNode === gameContainer) {
+                            gameContainer.removeChild(target);
+                        }
+                    }, 300);
+                }
+            });
+
+            gameContainer.appendChild(target);
+
+            setTimeout(() => {
+                if (target.parentNode === gameContainer) {
+                    target.style.transform = 'scale(0)';
+                    target.style.transition = 'transform 0.3s ease';
+                    setTimeout(() => {
+                        if (target.parentNode === gameContainer) {
+                            gameContainer.removeChild(target);
+                        }
+                    }, 300);
+                }
+            }, 2000);
+        }
+
+        function moveTargets() {
+            const targets = document.getElementsByClassName('target');
+            for (let target of targets) {
+                const currentX = parseInt(target.style.left);
+                const currentY = parseInt(target.style.top);
+                
+                const dx = (Math.random() - 0.5) * 10;
+                const dy = (Math.random() - 0.5) * 10;
+                
+                const newX = Math.max(0, Math.min(gameContainer.clientWidth - 50, currentX + dx));
+                const newY = Math.max(0, Math.min(gameContainer.clientHeight - 50, currentY + dy));
+                
+                target.style.left = newX + 'px';
+                target.style.top = newY + 'px';
+            }
+        }
+
+        function updateTimer() {
+            timeLeft--;
+            timerDisplay.textContent = `TIME: ${timeLeft}s`;
+            
+            if (timeLeft <= 0) {
+                endGame();
+            }
+        }
+
+        function startGame() {
+            if (isGameRunning) return;
+            
+            score = 0;
+            timeLeft = 60;
+            combo = 0;
+            scoreDisplay.textContent = score;
+            timerDisplay.textContent = `TIME: ${timeLeft}s`;
+            gameOverDisplay.style.display = 'none';
+            
+            while (gameContainer.getElementsByClassName('target').length > 0) {
+                gameContainer.removeChild(gameContainer.getElementsByClassName('target')[0]);
+            }
+            
+            isGameRunning = true;
+            startButton.textContent = 'IN PROGRESS';
+            
+            gameInterval = setInterval(updateTimer, 1000);
+            targetInterval = setInterval(() => {
+                if (gameContainer.getElementsByClassName('target').length < 5) {
+                    createTarget();
+                }
+            }, 1000);
+
+            setInterval(moveTargets, 50);
+        }
+
+        function endGame() {
+            isGameRunning = false;
+            clearInterval(gameInterval);
+            clearInterval(targetInterval);
+            
+            gameOverDisplay.style.display = 'block';
+            startButton.textContent = 'PLAY AGAIN';
+            
+            while (gameContainer.getElementsByClassName('target').length > 0) {
+                gameContainer.removeChild(gameContainer.getElementsByClassName('target')[0]);
+            }
+        }
+
+        startButton.addEventListener('click', startGame);
+    </script>
+</body>
+</html>
